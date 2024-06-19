@@ -5,6 +5,7 @@ const User = sequelize.sequelize.define("User", {
     Id: DataTypes.UUID,
     name: DataTypes.TEXT,
     password: DataTypes.TEXT,
+    role: DataTypes.STRING,
 },
 {
     timestamps:false,
