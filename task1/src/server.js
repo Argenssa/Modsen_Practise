@@ -20,9 +20,9 @@ sequelize.sequelize.sync().then(() => {
 
 app.post("/register",validate(userSchema), (req, res) => {
 
-    const {name, password,role} = req.body;
+    const {username, password,role} = req.body;
     try {
-        Registration(name, password, role);
+        Registration(username, password, role);
 
     } catch(error){
         res.status(500).json({ error: error.message });
