@@ -1,15 +1,16 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
-function Registration(name,password,role){
-
-    const CheckUser = User.User.findOne({name:name});
+async function Registration(name,password,role){
+console.log(name,password);
+    const CheckUser = await User.User.findOne({where:{username:name}});
     if(CheckUser){
         throw new Error(`${name} is already registered`);
     }else{
-        const newUser = new User({name:name,password:password,role:role});
+        const newUser = await User.User.create({username:name,password:password,role:role});
+        const token = jwt.sign({userId:newUser.Id,role:newUser.role},process.env.JWT_SECRET);
+        res.cookie('token', token);
     }
-    const token = jwt.sign({userId:newUser.Id,role:newUser.role},process.env.JWT_SECRET);
-    res.cookie('token', token);
+
 
 
 } exports.Registration = Registration;
