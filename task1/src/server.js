@@ -6,11 +6,13 @@ const {userSchema} = require("./validation/userValidate");
 const {validate} = require("./validation/validMiddleware");
 const {Registration} = require("./reg_auth/Registration");
 const {Authorization} = require("./reg_auth/Authorization");
+const {MeetUpsRoutes} = require("./routes/MeetUpsRoutes");
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
 
+const router = new MeetUpsRoutes();
 
 sequelize.sequelize.sync().then(() => {
     "Tables are created successfully."
@@ -43,7 +45,8 @@ app.post("/authorization", (req, res) => {
 })
 
 app.get("/meetUps", (req, res) => {
-   res.send("Hello");
+   const Meets = router.getMeetUps();
+   res.send(Meets);
 })
 
 app.listen(3000, () => {
