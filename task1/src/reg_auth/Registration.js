@@ -1,8 +1,8 @@
-const User = require('./User');
+const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 function Registration(name,password,role){
 
-    const CheckUser = User.findOne({name:name});
+    const CheckUser = User.User.findOne({name:name});
     if(CheckUser){
         throw new Error(`${name} is already registered`);
     }else{
@@ -12,4 +12,4 @@ function Registration(name,password,role){
     res.cookie('token', token);
 
 
-}
+} exports.Registration = Registration;
