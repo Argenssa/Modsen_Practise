@@ -3,7 +3,6 @@ const User = require("../models/User");
 const {DataType, DataTypes} = require("sequelize");
 
 const MeetUp = sequelize.sequelize.define("MeetUp", {
-    Id:DataTypes.UUID,
     Name:DataTypes.TEXT,
     Description:DataTypes.TEXT,
     Tags:DataTypes.ARRAY(DataTypes.TEXT),
