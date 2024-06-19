@@ -5,6 +5,7 @@ const {User} = require("./models/User");
 const {userSchema} = require("./validation/userValidate");
 const {validate} = require("./validation/validMiddleware");
 const {Registration} = require("./reg_auth/Registration");
+const {Authorization} = require("./reg_auth/Authorization");
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -24,15 +25,25 @@ app.post("/register",validate(userSchema), (req, res) => {
     try {
        const token= Registration(username, password, role);
         res.cookie('token', token);
-        res.redirect("/resource");
+        res.redirect("/meetUps");
     } catch(error){
         res.status(500).json({ error: error.message });
     }
-
 })
 
-app.get("/resource", (req, res) => {
-    
+app.post("/authorization", (req, res) => {
+    const {username, password,role} = req.body;
+    try {
+        const token= Authorization(username, password);
+        res.cookie('token', token);
+        res.redirect("/meetUps");
+    } catch(error){
+        res.status(500).json({ error: error.message });
+    }
+})
+
+app.get("/meetUps", (req, res) => {
+   res.send("Hello");
 })
 
 app.listen(3000, () => {
