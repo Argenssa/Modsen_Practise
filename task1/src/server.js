@@ -22,12 +22,17 @@ app.post("/register",validate(userSchema), (req, res) => {
 
     const {username, password,role} = req.body;
     try {
-        Registration(username, password, role);
-
+       const token= Registration(username, password, role);
+        res.cookie('token', token);
+        res.redirect("/resource");
     } catch(error){
         res.status(500).json({ error: error.message });
     }
 
+})
+
+app.get("/resource", (req, res) => {
+    
 })
 
 app.listen(3000, () => {
