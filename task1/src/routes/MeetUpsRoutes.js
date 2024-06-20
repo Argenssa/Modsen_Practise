@@ -14,7 +14,20 @@ class MeetUpsRoutes {
             if(checkMeetUp){
                 throw new Error(`MeetUp is already registered`);
             }
-            const newMeetUP = await  MeetUp.create({Name:name,Description:description,Tags:tags,Time:time,Place:place,serId:userId})
+            const newMeetUP = await  MeetUp.create({Name:name,Description:description,Tags:tags,Time:time,Place:place,userId:userId})
+            return newMeetUP;
+        }else{
+            throw  new Error(`You haven't enough privileges for creating MeetUps`);
+        }
+    }
+
+    async putMeetUp(name,description, tags, time, place, userId,role){
+        if(role == "organizer"){
+            const checkMeetUp = await MeetUp.findOne({where:{Name:name,Description:description,Tags:tags,Time:time,Place:place}})
+            if(checkMeetUp.userId !=userId){
+                throw new Error(`You can't do this`);
+            }
+            const newMeetUP = await  MeetUp.update({Name:name,Description:description,Tags:tags,Time:time,Place:place,serId:userId})
             return newMeetUP;
         }else{
             throw  new Error(`You haven't enough privileges for creating MeetUps`);

@@ -68,7 +68,6 @@ app.get("/meetUps", (req, res) => {
 })
 
 app.post("/meetUps", authenticateToken, async (req,res)=>{
-
         const user = await User.findOne({id:req.user.userId});
         const {name,description, tags, time, place} = req.body;
         console.log(name,user.role)
