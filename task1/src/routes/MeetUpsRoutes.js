@@ -11,6 +11,12 @@ class MeetUpsRoutes {
         const meetUp = await MeetUp.findByPk(id);
         return meetUp;
     }
+
+    async getMeetUpByName(name) {
+        const meetUp = await MeetUp.findAll({where:{Name:name}});
+        return meetUp;
+    }
+
     async postMeetUp(name, description, tags, time, place, userId, role) {
         if (role === "organizer") {
             const checkMeetUp = await MeetUp.findOne({ where: { Name: name, Description: description, Tags: tags, Time: time, Place: place, userId: userId } });

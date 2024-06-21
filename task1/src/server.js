@@ -2,6 +2,7 @@ const express = require('express');
 const sequelize = require("./database/database");
 const { MeetUp } = require("./models/MeetUp");
 const url = require('url');
+const { Op } = require("sequelize");
 const { User } = require("./models/User");
 const { RefreshToken } = require("./models/RefreshToken");
 const { userSchema } = require("./validation/userValidate");
@@ -78,54 +79,80 @@ app.get("/authorization", (req, res) => {
 
 app.get("/meetUps", authenticateToken, async (req, res) => {
     try {
-        const id=req.query.id;
-        let Meets;
-        if(id){
-             Meets = await router.getMeetUpById(id);
-        let meetUpsHtml = `
-            <button onclick="window.location.href='/createMeetUp'">Create MeetUp</button>
-            <button onclick="window.location.href='/updateMeetUp'">Update MeetUp</button>
-            <button onclick="window.location.href='/deleteMeetUp'">Delete MeetUp</button>
-            <ul>`;
-            meetUpsHtml += `<li>
-                <h3>${Meets.Name}</h3>
-                <p>${Meets.Description}</p>
-                <p>Tags: ${Array.isArray(Meets.Tags) ? Meets.Tags.join(', ') : Meets.Tags}</p>
-                <p>Time: ${Meets.Time}</p>
-                <p>Place: ${Meets.Place}</p>
-                <form action="/registerMeetUp" method="post">
-                    <input type="hidden" name="meetUpId" value="${Meets.Id}">
-                    <button type="submit">Register</button>
-                </form>
-            </li>`;
+        let { id, search, sortBy, filter, page, size } = req.query;
+        page = parseInt(page) || 1;
+        size = parseInt(size) || 5;
 
-        meetUpsHtml += '</ul>';
-        res.send(meetUpsHtml);
-}
-        else {
-            Meets = await router.getMeetUps();
+        let options = {};
+        let Meets;
+
+        if (id) {
+            const singleMeet = await router.getMeetUpById(id);
+            if (!singleMeet) {
+                return res.status(404).json({ error: "Meetup not found" });
+            }
+            Meets = [singleMeet];
+        } else {
+            if (search) {
+                options.where = {
+                    Name: { [Op.like]: `%${search}%` }
+                };
+            }
+
+            if (sortBy) {
+                options.order = [[sortBy, 'ASC']];
+            } else {
+                options.order = [['id', 'ASC']];
+            }
+
+            if (filter) {
+                options.where = {
+                    ...options.where,
+                    Tags: { [Op.like]: `%${filter}%` }
+                };
+            }
+
+            const { count, rows } = await MeetUp.findAndCountAll({
+                ...options,
+                offset: (page - 1) * size,
+                limit: size
+            });
+
+            Meets = rows;
+            const totalPages = Math.ceil(count / size);
 
             let meetUpsHtml = `
-            <button onclick="window.location.href='/createMeetUp'">Create MeetUp</button>
-            <button onclick="window.location.href='/updateMeetUp'">Update MeetUp</button>
-            <button onclick="window.location.href='/deleteMeetUp'">Delete MeetUp</button>
-            <ul>`;
+                <button onclick="window.location.href='/createMeetUp'">Create MeetUp</button>
+                <button onclick="window.location.href='/updateMeetUp'">Update MeetUp</button>
+                <button onclick="window.location.href='/deleteMeetUp'">Delete MeetUp</button>
+                <ul>`;
+
             Meets.forEach(meet => {
                 meetUpsHtml += `<li>
-                <h3>${meet.Name}</h3>
-                <p>${meet.Description}</p>
-                <p>Tags: ${Array.isArray(meet.Tags) ? meet.Tags.join(', ') : meet.Tags}</p>
-                <p>Time: ${meet.Time}</p>
-                <p>Place: ${meet.Place}</p>
-                <form action="/registerMeetUp" method="post">
-                    <input type="hidden" name="meetUpId" value="${meet.Id}">
-                    <button type="submit">Register</button>
-                </form>
-            </li>`;
+                    <h3>${meet.Name}</h3>
+                    <p>${meet.Description}</p>
+                    <p>Tags: ${Array.isArray(meet.Tags) ? meet.Tags.join(', ') : meet.Tags}</p>
+                    <p>Time: ${meet.Time}</p>
+                    <p>Place: ${meet.Place}</p>
+                    <form action="/registerMeetUp" method="post">
+                        <input type="hidden" name="meetUpId" value="${meet.id}">
+                        <button type="submit">Register</button>
+                    </form>
+                </li>`;
             });
+
             meetUpsHtml += '</ul>';
+
+            meetUpsHtml += `
+                <div>
+                    <p>Page ${page} of ${totalPages}</p>
+                    ${page > 1 ? `<a href="/meetUps?page=${page - 1}&size=${size}">Previous</a>` : ''}
+                    ${page < totalPages ? `<a href="/meetUps?page=${page + 1}&size=${size}">Next</a>` : ''}
+                </div>`;
+
             res.send(meetUpsHtml);
         }
+
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
