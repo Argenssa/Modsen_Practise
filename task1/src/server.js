@@ -1,16 +1,17 @@
 const express = require('express');
 const sequelize = require("./database/database");
-const {MeetUp} = require("./models/MeetUp");
-const {User} = require("./models/User");
-const {userSchema} = require("./validation/userValidate");
-const {validate} = require("./validation/validMiddleware");
-const {Registration} = require("./reg_auth/Registration");
-const {Authorization} = require("./reg_auth/Authorization");
-const {MeetUpsRoutes} = require("./routes/MeetUpsRoutes");
+const { MeetUp } = require("./models/MeetUp");
+const { User } = require("./models/User");
+const { userSchema } = require("./validation/userValidate");
+const { validate } = require("./validation/validMiddleware");
+const { Registration } = require("./reg_auth/Registration");
+const { Authorization } = require("./reg_auth/Authorization");
+const { MeetUpsRoutes } = require("./routes/MeetUpsRoutes");
 const app = express();
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
+
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -19,34 +20,32 @@ app.use(express.static('public'));
 const router = new MeetUpsRoutes();
 
 sequelize.sequelize.sync().then(() => {
-    "Tables are created successfully."
-})
-    .catch((err) => {
-        console.error(err);
-    });
+    console.log("Tables are created successfully.");
+}).catch((err) => {
+    console.error(err);
+});
 
-app.post("/register",validate(userSchema), (req, res) => {
-
-    const {username, password,role} = req.body;
+app.post("/register", validate(userSchema), async (req, res) => {
+    const { username, password, role } = req.body;
     try {
-       const token= Registration(username, password, role);
-        res.cookie('token', token);
+        const token = await Registration(username, password, role);
+        res.cookie('token', token, { httpOnly: true });
         res.redirect("/meetUps");
-    } catch(error){
+    } catch (error) {
         res.status(500).json({ error: error.message });
     }
-})
+});
 
-app.post("/authorization", (req, res) => {
-    const {username, password,role} = req.body;
+app.post("/authorization", async (req, res) => {
+    const { username, password } = req.body;
     try {
-        const token= Authorization(username, password);
-        res.cookie('token', token, {httpOnly: true });
+        const token = await Authorization(username, password);
+        res.cookie('token', token, { httpOnly: true });
         res.redirect("/meetUps");
-    } catch(error){
+    } catch (error) {
         res.status(500).json({ error: error.message });
     }
-})
+});
 
 const authenticateToken = (req, res, next) => {
     const token = req.cookies['token'];
@@ -58,26 +57,130 @@ const authenticateToken = (req, res, next) => {
         next();
     });
 };
-app.get("/meetUps", (req, res) => {
+
+app.get("/register", (req, res) => {
+    res.send(`
+        <form action="/register" method="post">
+            <label>Username:</label><input type="text" name="username" required><br>
+            <label>Password:</label><input type="password" name="password" required><br>
+            <label>Role:</label><input type="text" name="role" required><br>
+            <button type="submit">Register</button>
+        </form>
+    `);
+});
+
+app.get("/authorization", (req, res) => {
+    res.send(`
+        <form action="/authorization" method="post">
+            <label>Username:</label><input type="text" name="username" required><br>
+            <label>Password:</label><input type="password" name="password" required><br>
+            <button type="submit">Login</button>
+        </form>
+    `);
+});
+
+app.get("/meetUps", authenticateToken, async (req, res) => {
     try {
-        const Meets = router.getMeetUps();
-        res.send(Meets);
-    } catch(error) {
+        const Meets = await router.getMeetUps();
+        let meetUpsHtml = `
+            <button onclick="window.location.href='/createMeetUp'">Create MeetUp</button>
+            <button onclick="window.location.href='/updateMeetUp'">Update MeetUp</button>
+            <button onclick="window.location.href='/deleteMeetUp'">Delete MeetUp</button>
+            <ul>`;
+        Meets.forEach(meet => {
+            meetUpsHtml += `<li>
+                <h3>${meet.Name}</h3>
+                <p>${meet.Description}</p>
+                <p>Tags: ${Array.isArray(meet.Tags) ? meet.Tags.join(', ') : meet.Tags}</p>
+                <p>Time: ${meet.Time}</p>
+                <p>Place: ${meet.Place}</p>
+                <form action="/registerMeetUp" method="post">
+                    <input type="hidden" name="meetUpId" value="${meet.Id}">
+                    <button type="submit">Register</button>
+                </form>
+            </li>`;
+        });
+        meetUpsHtml += '</ul>';
+        res.send(meetUpsHtml);
+    } catch (error) {
         res.status(500).json({ error: error.message });
     }
-})
+});
 
-app.post("/meetUps", authenticateToken, async (req,res)=>{
-        const user = await User.findOne({id:req.user.userId});
-        const {name,description, tags, time, place} = req.body;
-        console.log(name,user.role)
-    try{
-        const newMeetUp = router.postMeetUp(name,description,tags,time,place,user.id,user.role);
-        res.send(newMeetUp)
-    }catch (error){
-        res.status(500).json({error:error.message})
+app.get("/createMeetUp", (req, res) => {
+    res.send(`
+        <form action="/meetUps" method="post">
+            <label>Name:</label><input type="text" name="name" required><br>
+            <label>Description:</label><input type="text" name="description" required><br>
+            <label>Tags:</label><input type="text" name="tags" required><br>
+            <label>Time:</label><input type="text" name="time" required><br>
+            <label>Place:</label><input type="text" name="place" required><br>
+            <button type="submit">Create</button>
+        </form>
+    `);
+});
+
+app.post("/updateMeetUp", authenticateToken, async (req, res) => {
+    const { id, name, description, tags, time, place } = req.body;
+    try {
+        const tagsArray = Array.isArray(tags) ? tags : tags.split(',').map(tag => tag.trim());
+        const updatedMeetUp = await router.updateMeetUp(id, name, description, tagsArray, time, place);
+        res.send(updatedMeetUp);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
-})
+});
+
+app.get("/updateMeetUp", (req, res) => {
+    res.send(`
+        <form action="/updateMeetUp" method="post">
+            <label>ID:</label><input type="text" name="id" required><br>
+            <label>Name:</label><input type="text" name="name" required><br>
+            <label>Description:</label><input type="text" name="description" required><br>
+            <label>Tags:</label><input type="text" name="tags" required><br>
+            <label>Time:</label><input type="text" name="time" required><br>
+            <label>Place:</label><input type="text" name="place" required><br>
+            <button type="submit">Update</button>
+        </form>
+    `);
+});
+
+app.get("/deleteMeetUp", (req, res) => {
+    res.send(`
+        <form action="/deleteMeetUp" method="post">
+            <label>ID:</label><input type="text" name="id" required><br>
+            <button type="submit">Delete</button>
+        </form>
+    `);
+});
+
+app.post("/deleteMeetUp", authenticateToken, async (req, res) => {
+    const { id } = req.body;
+    try {
+        const deletedMeetUp = await router.deleteMeetUp(id);
+        res.send(deletedMeetUp);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post("/meetUps", authenticateToken, async (req, res) => {
+    const user = await User.findOne({ where: { id: req.user.userId } });
+    const { name, description, tags, time, place } = req.body;
+    try {
+        const tagsArray = Array.isArray(tags) ? tags : tags.split(',').map(tag => tag.trim());
+        const newMeetUp = await router.postMeetUp(name, description, tagsArray, time, place, user.id, user.role);
+        res.redirect("/meetUps");
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get("/logout", (req, res) => {
+    res.clearCookie('token');
+    res.redirect("/authorization");
+});
+
 app.listen(3000, () => {
     console.log(`Server running on port 3000`);
-})
+});

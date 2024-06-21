@@ -8,7 +8,7 @@ console.log(name,password);
         throw new Error(`${name} is already registered`);
     }else{
         const user = await User.User.create({username:name,password:password,role:role});
-        const token = jwt.sign({userId:user.Id,role:user.role},process.env.JWT_SECRET);
+        const token = jwt.sign({userId:user.id,role:user.role},process.env.JWT_SECRET);
         return token;
     }
 
