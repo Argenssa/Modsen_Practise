@@ -1,23 +1,16 @@
 const { DataTypes } = require('sequelize');
+const {User} = require("../models/User")
 const sequelize = require('../database/database');
 
-const RefreshToken = sequelize.define('RefreshToken', {
-    token: {
-        type: DataTypes.STRING,
-        allowNull: false,
-    },
-    userId: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-            model: 'User',
-            key: 'id'
-        }
-    },
-    expires: {
-        type: DataTypes.DATE,
-        allowNull: false,
-    }
-});
+const RefreshToken = sequelize.sequelize.define("RefreshToken", {
+    token: DataTypes.STRING,
+    expires: DataTypes.DATE,
+},
+    {
+    timestamps:false,
 
-module.exports = RefreshToken;
+
+});
+User.hasOne(RefreshToken, {foreignKey: "userId"})
+RefreshToken.belongsTo(User, { foreignKey: "userId" });
+exports.RefreshToken = RefreshToken;

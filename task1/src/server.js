@@ -3,16 +3,19 @@ const sequelize = require("./database/database");
 const { MeetUp } = require("./models/MeetUp");
 const url = require('url');
 const { User } = require("./models/User");
+const { RefreshToken } = require("./models/RefreshToken");
 const { userSchema } = require("./validation/userValidate");
 const { validate } = require("./validation/validMiddleware");
 const { Registration } = require("./reg_auth/Registration");
 const { Authorization } = require("./reg_auth/Authorization");
 const { MeetUpsRoutes } = require("./routes/MeetUpsRoutes");
 const app = express();
+const tokenRoutes = require('./routes/TokenRoutes');
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
 const passport = require('./passport/passport');
+app.use('/', tokenRoutes);
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -29,8 +32,9 @@ sequelize.sequelize.sync().then(() => {
 app.post("/register", validate(userSchema), async (req, res) => {
     const { username, password, role } = req.body;
     try {
-        const token = await Registration(username, password, role);
+        const {token, refreshToken} = await Registration(username, password, role);
         res.cookie('token', token, { httpOnly: true });
+        res.cookie('refreshToken', refreshToken, { httpOnly: true });
         res.redirect("/meetUps");
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -40,8 +44,9 @@ app.post("/register", validate(userSchema), async (req, res) => {
 app.post("/authorization", async (req, res) => {
     const { username, password } = req.body;
     try {
-        const token = await Authorization(username, password);
+        const {token,refreshToken} = await Authorization(username, password);
         res.cookie('token', token, { httpOnly: true });
+        res.cookie('refreshToken', refreshToken, { httpOnly: true });
         res.redirect("/meetUps");
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -141,7 +146,7 @@ app.get("/createMeetUp", (req, res) => {
 });
 
 app.post("/updateMeetUp", authenticateToken, async (req, res) => {
-    const user = await User.findOne({ where: { id: req.user.userId } });
+    const user = await User.findOne({ where: { id: req.user.id } });
 
     const { id, name, description, tags, time, place } = req.body;
     try {
@@ -180,7 +185,7 @@ app.get("/deleteMeetUp", (req, res) => {
 });
 
 app.post("/deleteMeetUp", authenticateToken, async (req, res) => {
-    const user = await User.findOne({ where: { id: req.user.userId } });
+    const user = await User.findOne({ where: { id: req.user.id } });
     const { id } = req.body;
     try {
         if(user.role!="organizer")
@@ -193,7 +198,7 @@ app.post("/deleteMeetUp", authenticateToken, async (req, res) => {
 });
 
 app.post("/meetUps", authenticateToken, async (req, res) => {
-    const user = await User.findOne({ where: { id: req.user.userId } });
+    const user = await User.findOne({ where: { id: req.user.id } });
     const { name, description, tags, time, place } = req.body;
     try {
         const tagsArray = Array.isArray(tags) ? tags : tags.split(',').map(tag => tag.trim());
@@ -204,10 +209,17 @@ app.post("/meetUps", authenticateToken, async (req, res) => {
     }
 });
 
-app.get("/logout", (req, res) => {
-    res.clearCookie('token');
-    res.redirect("/authorization");
+app.get("/logout", authenticateToken, async (req, res) => {
+    const userId = req.user.userId;
+    try {
+       await RefreshToken.destroy({ where: { userId:req.user.id} });
+        res.clearCookie('token');
+        res.redirect("/authorization");
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
+
 
 app.listen(3000, () => {
     console.log(`Server running on port 3000`);
