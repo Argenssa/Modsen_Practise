@@ -24,12 +24,13 @@ class MeetUpsRoutes {
         }
     }
 
-    async updateMeetUp(id, updates) {
+    async updateMeetUp(id, updates,userId) {
         const meetUp = await MeetUp.findOne({ where: { id: id } });
         if (!meetUp) {
             throw new Error(`MeetUp not found`);
         }
-
+        if(meetUp.userId!=userId)
+            throw new Error(`It isn't your meetUp`);
         if (updates.name) meetUp.Name = updates.name;
         if (updates.description) meetUp.Description = updates.description;
         if (updates.tags) {
@@ -44,12 +45,15 @@ class MeetUpsRoutes {
     }
 
 
-    async deleteMeetUp(id) {
+    async deleteMeetUp(id,userId) {
         const meetUp = await MeetUp.findOne({ where: { id: id } });
+
         if (!meetUp) {
             throw new Error(`MeetUp not found`);
         }
-        await meetUp.destroy();
+        if(meetUp.userId!=userId)
+            throw new Error(`It isn't your meetUp`);
+            await meetUp.destroy();
         return { message: `MeetUp with id ${id} deleted` };
     }
 }

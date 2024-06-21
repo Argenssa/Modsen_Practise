@@ -90,7 +90,7 @@ app.get("/meetUps", authenticateToken, async (req, res) => {
             <button onclick="window.location.href='/createMeetUp'">Create MeetUp</button>
             <button onclick="window.location.href='/updateMeetUp'">Update MeetUp</button>
             <button onclick="window.location.href='/deleteMeetUp'">Delete MeetUp</button>
-            <ul>`; 
+            <ul>`;
             meetUpsHtml += `<li>
                 <h3>${Meets.Name}</h3>
                 <p>${Meets.Description}</p>
@@ -150,10 +150,14 @@ app.get("/createMeetUp", (req, res) => {
 });
 
 app.post("/updateMeetUp", authenticateToken, async (req, res) => {
+    const user = await User.findOne({ where: { id: req.user.userId } });
+
     const { id, name, description, tags, time, place } = req.body;
     try {
-        const updates = { name, description, tags, time, place };
-        const updatedMeetUp = await router.updateMeetUp(id, updates);
+        if(user.role!="organizer")
+            throw new Error("you haven't enough privileges")
+        const updates = { name, description, tags, time, place};
+        const updatedMeetUp = await router.updateMeetUp(id, updates,user.id);
         res.redirect("/meetUps");
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -185,9 +189,12 @@ app.get("/deleteMeetUp", (req, res) => {
 });
 
 app.post("/deleteMeetUp", authenticateToken, async (req, res) => {
+    const user = await User.findOne({ where: { id: req.user.userId } });
     const { id } = req.body;
     try {
-        const deletedMeetUp = await router.deleteMeetUp(id);
+        if(user.role!="organizer")
+            throw new Error("you haven't enough privileges")
+        const deletedMeetUp = await router.deleteMeetUp(id,user.id);
         res.redirect("/meetUps");
     } catch (error) {
         res.status(500).json({ error: error.message });
