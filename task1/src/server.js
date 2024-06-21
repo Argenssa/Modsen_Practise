@@ -90,7 +90,7 @@ app.get("/meetUps", authenticateToken, async (req, res) => {
             <button onclick="window.location.href='/createMeetUp'">Create MeetUp</button>
             <button onclick="window.location.href='/updateMeetUp'">Update MeetUp</button>
             <button onclick="window.location.href='/deleteMeetUp'">Delete MeetUp</button>
-            <ul>`;
+            <ul>`; 
             meetUpsHtml += `<li>
                 <h3>${Meets.Name}</h3>
                 <p>${Meets.Description}</p>
