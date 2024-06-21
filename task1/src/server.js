@@ -12,12 +12,12 @@ const app = express();
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
-
+const passport = require('./passport/passport');
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
-
+app.use(passport.initialize());
 const router = new MeetUpsRoutes();
 
 sequelize.sequelize.sync().then(() => {
@@ -48,16 +48,7 @@ app.post("/authorization", async (req, res) => {
     }
 });
 
-const authenticateToken = (req, res, next) => {
-    const token = req.cookies['token'];
-    if (!token) return res.sendStatus(401); // Unauthorized
-
-    jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-        if (err) return res.sendStatus(403); // Forbidden
-        req.user = user;
-        next();
-    });
-};
+const authenticateToken = passport.authenticate('jwt', { session: false });
 
 app.get("/register", (req, res) => {
     res.send(`
