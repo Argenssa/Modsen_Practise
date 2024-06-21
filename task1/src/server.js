@@ -1,6 +1,7 @@
 const express = require('express');
 const sequelize = require("./database/database");
 const { MeetUp } = require("./models/MeetUp");
+const url = require('url');
 const { User } = require("./models/User");
 const { userSchema } = require("./validation/userValidate");
 const { validate } = require("./validation/validMiddleware");
@@ -81,14 +82,40 @@ app.get("/authorization", (req, res) => {
 
 app.get("/meetUps", authenticateToken, async (req, res) => {
     try {
-        const Meets = await router.getMeetUps();
+        const id=req.query.id;
+        let Meets;
+        if(id){
+             Meets = await router.getMeetUpById(id);
         let meetUpsHtml = `
             <button onclick="window.location.href='/createMeetUp'">Create MeetUp</button>
             <button onclick="window.location.href='/updateMeetUp'">Update MeetUp</button>
             <button onclick="window.location.href='/deleteMeetUp'">Delete MeetUp</button>
             <ul>`;
-        Meets.forEach(meet => {
             meetUpsHtml += `<li>
+                <h3>${Meets.Name}</h3>
+                <p>${Meets.Description}</p>
+                <p>Tags: ${Array.isArray(Meets.Tags) ? Meets.Tags.join(', ') : Meets.Tags}</p>
+                <p>Time: ${Meets.Time}</p>
+                <p>Place: ${Meets.Place}</p>
+                <form action="/registerMeetUp" method="post">
+                    <input type="hidden" name="meetUpId" value="${Meets.Id}">
+                    <button type="submit">Register</button>
+                </form>
+            </li>`;
+
+        meetUpsHtml += '</ul>';
+        res.send(meetUpsHtml);
+}
+        else {
+            Meets = await router.getMeetUps();
+
+            let meetUpsHtml = `
+            <button onclick="window.location.href='/createMeetUp'">Create MeetUp</button>
+            <button onclick="window.location.href='/updateMeetUp'">Update MeetUp</button>
+            <button onclick="window.location.href='/deleteMeetUp'">Delete MeetUp</button>
+            <ul>`;
+            Meets.forEach(meet => {
+                meetUpsHtml += `<li>
                 <h3>${meet.Name}</h3>
                 <p>${meet.Description}</p>
                 <p>Tags: ${Array.isArray(meet.Tags) ? meet.Tags.join(', ') : meet.Tags}</p>
@@ -99,13 +126,15 @@ app.get("/meetUps", authenticateToken, async (req, res) => {
                     <button type="submit">Register</button>
                 </form>
             </li>`;
-        });
-        meetUpsHtml += '</ul>';
-        res.send(meetUpsHtml);
+            });
+            meetUpsHtml += '</ul>';
+            res.send(meetUpsHtml);
+        }
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
+
 
 app.get("/createMeetUp", (req, res) => {
     res.send(`
@@ -123,23 +152,24 @@ app.get("/createMeetUp", (req, res) => {
 app.post("/updateMeetUp", authenticateToken, async (req, res) => {
     const { id, name, description, tags, time, place } = req.body;
     try {
-        const tagsArray = Array.isArray(tags) ? tags : tags.split(',').map(tag => tag.trim());
-        const updatedMeetUp = await router.updateMeetUp(id, name, description, tagsArray, time, place);
-        res.send(updatedMeetUp);
+        const updates = { name, description, tags, time, place };
+        const updatedMeetUp = await router.updateMeetUp(id, updates);
+        res.redirect("/meetUps");
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
 
+
 app.get("/updateMeetUp", (req, res) => {
     res.send(`
         <form action="/updateMeetUp" method="post">
             <label>ID:</label><input type="text" name="id" required><br>
-            <label>Name:</label><input type="text" name="name" required><br>
-            <label>Description:</label><input type="text" name="description" required><br>
-            <label>Tags:</label><input type="text" name="tags" required><br>
-            <label>Time:</label><input type="text" name="time" required><br>
-            <label>Place:</label><input type="text" name="place" required><br>
+            <label>Name:</label><input type="text" name="name" ><br>
+            <label>Description:</label><input type="text" name="description"><br>
+            <label>Tags:</label><input type="text" name="tags"><br>
+            <label>Time:</label><input type="text" name="time"><br>
+            <label>Place:</label><input type="text" name="place"><br>
             <button type="submit">Update</button>
         </form>
     `);
@@ -158,7 +188,7 @@ app.post("/deleteMeetUp", authenticateToken, async (req, res) => {
     const { id } = req.body;
     try {
         const deletedMeetUp = await router.deleteMeetUp(id);
-        res.send(deletedMeetUp);
+        res.redirect("/meetUps");
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

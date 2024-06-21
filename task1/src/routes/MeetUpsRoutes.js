@@ -7,6 +7,10 @@ class MeetUpsRoutes {
         return meetUps;
     }
 
+    async getMeetUpById(id) {
+        const meetUp = await MeetUp.findByPk(id);
+        return meetUp;
+    }
     async postMeetUp(name, description, tags, time, place, userId, role) {
         if (role === "organizer") {
             const checkMeetUp = await MeetUp.findOne({ where: { Name: name, Description: description, Tags: tags, Time: time, Place: place, userId: userId } });
@@ -20,19 +24,25 @@ class MeetUpsRoutes {
         }
     }
 
-    async updateMeetUp(id, name, description, tags, time, place) {
+    async updateMeetUp(id, updates) {
         const meetUp = await MeetUp.findOne({ where: { id: id } });
         if (!meetUp) {
             throw new Error(`MeetUp not found`);
         }
-        meetUp.Name = name;
-        meetUp.Description = description;
-        meetUp.Tags = tags;
-        meetUp.Time = time;
-        meetUp.Place = place;
+
+        if (updates.name) meetUp.Name = updates.name;
+        if (updates.description) meetUp.Description = updates.description;
+        if (updates.tags) {
+            const tagsArray = Array.isArray(updates.tags) ? updates.tags : updates.tags.split(',').map(tag => tag.trim());
+            meetUp.Tags = tagsArray;
+        }
+        if (updates.time) meetUp.Time = updates.time;
+        if (updates.place) meetUp.Place = updates.place;
+
         await meetUp.save();
         return meetUp;
     }
+
 
     async deleteMeetUp(id) {
         const meetUp = await MeetUp.findOne({ where: { id: id } });
