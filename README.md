@@ -1,2 +1,2 @@
-# Modsen_Practise
-tasks from practise
+# Modsen_Practice
+tasks from practice
