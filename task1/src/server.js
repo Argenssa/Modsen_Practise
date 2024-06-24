@@ -16,10 +16,12 @@ require('dotenv').config();
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
 const passport = require('./passport/passport');
+const swaggerRouter = require('./docs/swagger');
 app.use('/', tokenRoutes);
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use('/api-docs', swaggerRouter);
 app.use(express.static('public'));
 app.use(passport.initialize());
 const router = new MeetUpsRoutes();
@@ -30,10 +32,32 @@ sequelize.sequelize.sync().then(() => {
     console.error(err);
 });
 
+/**
+ * @swagger
+ * /register:
+ *   post:
+ *     summary: Register a new user
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/User'
+ *     responses:
+ *       201:
+ *         description: The created user
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/User'
+ *       500:
+ *         description: Some server error
+ */
 app.post("/register", validate(userSchema), async (req, res) => {
     const { username, password, role } = req.body;
     try {
-        const {token, refreshToken} = await Registration(username, password, role);
+        const { token, refreshToken } = await Registration(username, password, role);
         res.cookie('token', token, { httpOnly: true });
         res.cookie('refreshToken', refreshToken, { httpOnly: true });
         res.redirect("/meetUps");
@@ -42,6 +66,38 @@ app.post("/register", validate(userSchema), async (req, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /authorization:
+ *   post:
+ *     summary: User authorization
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               username:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       302:
+ *         description: Redirect to /meetUps
+ *         headers:
+ *           Set-Cookie:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: string
+ *               example:
+ *                 - token=yourAccessToken; HttpOnly
+ *                 - refreshToken=yourRefreshToken; HttpOnly
+ *       500:
+ *         description: Server error
+ */
 app.post("/authorization", async (req, res) => {
     const { username, password } = req.body;
     try {
@@ -55,6 +111,7 @@ app.post("/authorization", async (req, res) => {
 });
 
 const authenticateToken = passport.authenticate('jwt', { session: false });
+
 
 app.get("/register", (req, res) => {
     res.send(`
@@ -77,6 +134,55 @@ app.get("/authorization", (req, res) => {
     `);
 });
 
+/**
+ * @swagger
+ * /meetUps:
+ *   get:
+ *     summary: Retrieve a list of meetups
+ *     tags: [MeetUps]
+ *     parameters:
+ *       - in: query
+ *         name: id
+ *         schema:
+ *           type: integer
+ *         description: The ID of the meetup
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: A search term for the meetup name
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *         description: A field to sort by
+ *       - in: query
+ *         name: filter
+ *         schema:
+ *           type: string
+ *         description: A filter term for the meetup tags
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *         description: The page number
+ *       - in: query
+ *         name: size
+ *         schema:
+ *           type: integer
+ *         description: The number of items per page
+ *     responses:
+ *       200:
+ *         description: A list of meetups
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/MeetUp'
+ *       500:
+ *         description: Some server error
+ */
 app.get("/meetUps", authenticateToken, async (req, res) => {
     try {
         let { id, search, sortBy, filter, page, size } = req.query;
@@ -92,66 +198,81 @@ app.get("/meetUps", authenticateToken, async (req, res) => {
                 return res.status(404).json({ error: "Meetup not found" });
             }
             Meets = [singleMeet];
-        } else {
-            if (search) {
-                options.where = {
-                    Name: { [Op.like]: `%${search}%` }
-                };
-            }
 
-            if (sortBy) {
-                options.order = [[sortBy, 'ASC']];
-            } else {
-                options.order = [['id', 'ASC']];
-            }
-
-            if (filter) {
-                options.where = {
-                    ...options.where,
-                    Tags: { [Op.like]: `%${filter}%` }
-                };
-            }
-
-            const { count, rows } = await MeetUp.findAndCountAll({
-                ...options,
-                offset: (page - 1) * size,
-                limit: size
-            });
-
-            Meets = rows;
-            const totalPages = Math.ceil(count / size);
-
-            let meetUpsHtml = `
-                <button onclick="window.location.href='/createMeetUp'">Create MeetUp</button>
-                <button onclick="window.location.href='/updateMeetUp'">Update MeetUp</button>
-                <button onclick="window.location.href='/deleteMeetUp'">Delete MeetUp</button>
-                <ul>`;
-
-            Meets.forEach(meet => {
-                meetUpsHtml += `<li>
-                    <h3>${meet.Name}</h3>
-                    <p>${meet.Description}</p>
-                    <p>Tags: ${Array.isArray(meet.Tags) ? meet.Tags.join(', ') : meet.Tags}</p>
-                    <p>Time: ${meet.Time}</p>
-                    <p>Place: ${meet.Place}</p>
-                    <form action="/registerMeetUp" method="post">
-                        <input type="hidden" name="meetUpId" value="${meet.id}">
-                        <button type="submit">Register</button>
-                    </form>
-                </li>`;
-            });
-
-            meetUpsHtml += '</ul>';
-
-            meetUpsHtml += `
-                <div>
-                    <p>Page ${page} of ${totalPages}</p>
-                    ${page > 1 ? `<a href="/meetUps?page=${page - 1}&size=${size}">Previous</a>` : ''}
-                    ${page < totalPages ? `<a href="/meetUps?page=${page + 1}&size=${size}">Next</a>` : ''}
-                </div>`;
-
-            res.send(meetUpsHtml);
+            let meetUpHtml = `
+                <h3>${singleMeet.Name}</h3>
+                <p>${singleMeet.Description}</p>
+                <p>Tags: ${Array.isArray(singleMeet.Tags) ? singleMeet.Tags.join(', ') : singleMeet.Tags}</p>
+                <p>Time: ${singleMeet.Time}</p>
+                <p>Place: ${singleMeet.Place}</p>
+                <form action="/registerMeetUp" method="post">
+                    <input type="hidden" name="meetUpId" value="${singleMeet.id}">
+                    <button type="submit">Register</button>
+                </form>
+            `;
+            return res.send(meetUpHtml);
         }
+
+        if (search) {
+            options.where = {
+                Name: { [Op.like]: `%${search}%` }
+            };
+        }
+
+        if (sortBy) {
+            options.order = [[sortBy, 'ASC']];
+        } else {
+            options.order = [['id', 'ASC']];
+        }
+
+        if (filter) {
+            options.where = {
+                Tags: {
+                    [Op.contains]: [filter]
+                }
+            };
+        }
+
+        const { count, rows } = await MeetUp.findAndCountAll({
+            ...options,
+            offset: (page - 1) * size,
+            limit: size
+        });
+
+        Meets = rows;
+
+        const totalPages = Math.ceil(count / size);
+
+        let meetUpsHtml = `
+            <button onclick="window.location.href='/createMeetUp'">Create MeetUp</button>
+            <button onclick="window.location.href='/updateMeetUp'">Update MeetUp</button>
+            <button onclick="window.location.href='/deleteMeetUp'">Delete MeetUp</button>
+            <ul>`;
+
+        Meets.forEach(meet => {
+            meetUpsHtml += `<li>
+                <h3>${meet.Name}</h3>
+                <p>${meet.Description}</p>
+                <p>Tags: ${Array.isArray(meet.Tags) ? meet.Tags.join(', ') : meet.Tags}</p>
+                <p>Time: ${meet.Time}</p>
+                <p>Place: ${meet.Place}</p>
+                <form action="/registerMeetUp" method="post">
+                    <input type="hidden" name="meetUpId" value="${meet.id}">
+                    <button type="submit">Register</button>
+                </form>
+            </li>`;
+        });
+
+        meetUpsHtml += '</ul>';
+
+        meetUpsHtml += `
+            <div>
+                <p>Page ${page} of ${totalPages}</p>
+                ${page > 1 ? `<a href="/meetUps?page=${page - 1}&size=${size}">Previous</a>` : ''}
+                ${page < totalPages ? `<a href="/meetUps?page=${page + 1}&size=${size}">Next</a>` : ''}
+            </div>`;
+
+        res.send(meetUpsHtml);
 
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -172,7 +293,40 @@ app.get("/createMeetUp", (req, res) => {
     `);
 });
 
-app.post("/updateMeetUp", authenticateToken, async (req, res) => {
+/**
+ * @swagger
+ * /meetUps:
+ *   put:
+ *     summary: Update a MeetUp
+ *     tags: [MeetUps]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               id:
+ *                 type: integer
+ *               name:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               tags:
+ *                 type: string
+ *               time:
+ *                 type: string
+ *               place:
+ *                 type: string
+ *     responses:
+ *       302:
+ *         description: Redirect to /meetUps
+ *       500:
+ *         description: Server error
+ */
+app.put("/meetUps", authenticateToken, async (req, res) => {
     const user = await User.findOne({ where: { id: req.user.id } });
 
     const { id, name, description, tags, time, place } = req.body;
@@ -187,31 +341,89 @@ app.post("/updateMeetUp", authenticateToken, async (req, res) => {
     }
 });
 
-
 app.get("/updateMeetUp", (req, res) => {
     res.send(`
-        <form action="/updateMeetUp" method="post">
+        <form id="updateForm">
             <label>ID:</label><input type="text" name="id" required><br>
-            <label>Name:</label><input type="text" name="name" ><br>
+            <label>Name:</label><input type="text" name="name"><br>
             <label>Description:</label><input type="text" name="description"><br>
             <label>Tags:</label><input type="text" name="tags"><br>
             <label>Time:</label><input type="text" name="time"><br>
             <label>Place:</label><input type="text" name="place"><br>
             <button type="submit">Update</button>
         </form>
+        <script>
+            document.getElementById('updateForm').addEventListener('submit', async function(event) {
+                event.preventDefault();
+                const formData = new FormData(event.target);
+                const data = Object.fromEntries(formData);
+                const response = await fetch('/meetUps', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                if (response.ok) {
+                    window.location.href = '/meetUps';
+                } else {
+                    const errorData = await response.json();
+                    alert(errorData.error);
+                }
+            });
+        </script>
     `);
 });
 
 app.get("/deleteMeetUp", (req, res) => {
     res.send(`
-        <form action="/deleteMeetUp" method="post">
+        <form id="deleteForm">
             <label>ID:</label><input type="text" name="id" required><br>
             <button type="submit">Delete</button>
         </form>
+        <script>
+            document.getElementById('deleteForm').addEventListener('submit', async function(event) {
+                event.preventDefault();
+                const formData = new FormData(event.target);
+                const data = Object.fromEntries(formData);
+                const response = await fetch('/meetUps', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                if (response.ok) {
+                    window.location.href = '/meetUps';
+                } else {
+                    const errorData = await response.json();
+                    alert(errorData.error);
+                }
+            });
+        </script>
     `);
 });
 
-app.post("/deleteMeetUp", authenticateToken, async (req, res) => {
+/**
+ * @swagger
+ * /meetUps:
+ *   delete:
+ *     summary: Delete a MeetUp
+ *     tags: [MeetUps]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               id:
+ *                 type: integer
+ *     responses:
+ *       302:
+ *         description: Redirect to /meetUps
+ *       500:
+ *         description: Server error
+ */
+app.delete("/meetUps", authenticateToken, async (req, res) => {
     const user = await User.findOne({ where: { id: req.user.id } });
     const { id } = req.body;
     try {
@@ -223,7 +435,43 @@ app.post("/deleteMeetUp", authenticateToken, async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
-
+/**
+ * @swagger
+ * /meetUps:
+ *   post:
+ *     summary: Create a new MeetUp
+ *     tags: [MeetUps]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               tags:
+ *                 type: string
+ *               time:
+ *                 type: string
+ *               place:
+ *                 type: string
+ *             example:
+ *               name: "Example MeetUp"
+ *               description: "This is an example MeetUp"
+ *               tags: "tech, networking"
+ *               time: "14:00:00"
+ *               place: "Virtual"
+ *     responses:
+ *       302:
+ *         description: Redirect to /meetUps
+ *       500:
+ *         description: Server error
+ */
 app.post("/meetUps", authenticateToken, async (req, res) => {
     const user = await User.findOne({ where: { id: req.user.id } });
     const { name, description, tags, time, place } = req.body;
@@ -235,6 +483,26 @@ app.post("/meetUps", authenticateToken, async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+
+/**
+ * @swagger
+ * /logout:
+ *   get:
+ *     summary: Logout and clear session
+ *     tags: [Auth]
+ *     responses:
+ *       200:
+ *         description: Successfully logged out
+ *         content:
+ *           text/html:
+ *             schema:
+ *               type: string
+ *       500:
+ *         description: Server error
+ */
+
+
+
 
 app.get("/logout", authenticateToken, async (req, res) => {
     const userId = req.user.userId;
