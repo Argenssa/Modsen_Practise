@@ -1,4 +1,4 @@
-'[1]use strict';
+'use strict';
 
 function sum_vowels_in_string(str) {
     str = str.toLowerCase();

@@ -1,4 +1,4 @@
-'[1]use strict';
+'use strict';
 
 function findDuplicates(arr) {
     for(let i = 0; i < arr.length-1; i++) {

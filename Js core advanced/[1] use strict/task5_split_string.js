@@ -1,4 +1,4 @@
-'[1]use strict';
+'use strict';
 
 function spliceString(str) {
     str=str.replace(/[^\w\s']|_/g, '');
