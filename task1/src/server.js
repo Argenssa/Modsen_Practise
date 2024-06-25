@@ -1,6 +1,7 @@
 const express = require('express');
 const sequelize = require("./database/database");
 const { MeetUp } = require("./models/MeetUp");
+const { UserMeetUp } = require("./models/UserMeetUp");
 const url = require('url');
 const { Op } = require("sequelize");
 const { User } = require("./models/User");
@@ -17,6 +18,28 @@ const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
 const passport = require('./passport/passport');
 const swaggerRouter = require('./docs/swagger');
+
+function errorHandler(err, req, res, next) {
+    console.error(err.stack);
+    res.status(err.status || 500).json({
+        error: {
+            message: err.message,
+            status: err.status || 500
+        }
+    });
+}
+
+const validateTime = (req, res, next) => {
+    const { time } = req.body;
+    const timeRegex = /^([01]\d|2[0-3]):([0-5]\d):([0-5]\d)$/;
+
+    if (!time || timeRegex.test(time)) {
+        next();
+    } else {
+        return res.status(400).json({ error: "Invalid time format. The correct format is HH:MM:SS" });
+    }
+};
+
 app.use('/', tokenRoutes);
 app.use(cookieParser());
 app.use(express.json());
@@ -24,7 +47,10 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api-docs', swaggerRouter);
 app.use(express.static('public'));
 app.use(passport.initialize());
+app.use(errorHandler);
+app.use(validateTime)
 const router = new MeetUpsRoutes();
+
 
 sequelize.sequelize.sync().then(() => {
     console.log("Tables are created successfully.");
@@ -54,7 +80,7 @@ sequelize.sequelize.sync().then(() => {
  *       500:
  *         description: Some server error
  */
-app.post("/register", validate(userSchema), async (req, res) => {
+app.post("/register", validate(userSchema), async (req, res, next) => {
     const { username, password, role } = req.body;
     try {
         const { token, refreshToken } = await Registration(username, password, role);
@@ -62,7 +88,7 @@ app.post("/register", validate(userSchema), async (req, res) => {
         res.cookie('refreshToken', refreshToken, { httpOnly: true });
         res.redirect("/meetUps");
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        next(error);
     }
 });
 
@@ -98,7 +124,7 @@ app.post("/register", validate(userSchema), async (req, res) => {
  *       500:
  *         description: Server error
  */
-app.post("/authorization", async (req, res) => {
+app.post("/authorization", async (req, res, next) => {
     const { username, password } = req.body;
     try {
         const {token,refreshToken} = await Authorization(username, password);
@@ -106,7 +132,7 @@ app.post("/authorization", async (req, res) => {
         res.cookie('refreshToken', refreshToken, { httpOnly: true });
         res.redirect("/meetUps");
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        next(error);
     }
 });
 
@@ -183,7 +209,7 @@ app.get("/authorization", (req, res) => {
  *       500:
  *         description: Some server error
  */
-app.get("/meetUps", authenticateToken, async (req, res) => {
+app.get("/meetUps", authenticateToken, async (req, res, next) => {
     try {
         let { id, search, sortBy, filter, page, size } = req.query;
         page = parseInt(page) || 1;
@@ -197,7 +223,7 @@ app.get("/meetUps", authenticateToken, async (req, res) => {
             if (!singleMeet) {
                 return res.status(404).json({ error: "Meetup not found" });
             }
-            Meets = [singleMeet];
+            const registeredUsersCount = await UserMeetUp.count({ where: { meetUpId: id } });
 
             let meetUpHtml = `
                 <h3>${singleMeet.Name}</h3>
@@ -205,6 +231,7 @@ app.get("/meetUps", authenticateToken, async (req, res) => {
                 <p>Tags: ${Array.isArray(singleMeet.Tags) ? singleMeet.Tags.join(', ') : singleMeet.Tags}</p>
                 <p>Time: ${singleMeet.Time}</p>
                 <p>Place: ${singleMeet.Place}</p>
+                <p>Registered Users: ${registeredUsersCount}</p>
                 <form action="/registerMeetUp" method="post">
                     <input type="hidden" name="meetUpId" value="${singleMeet.id}">
                     <button type="submit">Register</button>
@@ -249,19 +276,22 @@ app.get("/meetUps", authenticateToken, async (req, res) => {
             <button onclick="window.location.href='/deleteMeetUp'">Delete MeetUp</button>
             <ul>`;
 
-        Meets.forEach(meet => {
+        for (const meet of Meets) {
+            const registeredUsersCount = await UserMeetUp.count({ where: { meetUpId: meet.id } });
+
             meetUpsHtml += `<li>
                 <h3>${meet.Name}</h3>
                 <p>${meet.Description}</p>
                 <p>Tags: ${Array.isArray(meet.Tags) ? meet.Tags.join(', ') : meet.Tags}</p>
                 <p>Time: ${meet.Time}</p>
                 <p>Place: ${meet.Place}</p>
+                <p>Registered Users: ${registeredUsersCount}</p>
                 <form action="/registerMeetUp" method="post">
                     <input type="hidden" name="meetUpId" value="${meet.id}">
                     <button type="submit">Register</button>
                 </form>
             </li>`;
-        });
+        }
 
         meetUpsHtml += '</ul>';
 
@@ -275,7 +305,7 @@ app.get("/meetUps", authenticateToken, async (req, res) => {
         res.send(meetUpsHtml);
 
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        next(error);
     }
 });
 
@@ -326,7 +356,7 @@ app.get("/createMeetUp", (req, res) => {
  *       500:
  *         description: Server error
  */
-app.put("/meetUps", authenticateToken, async (req, res) => {
+app.put("/meetUps", authenticateToken, validateTime, async (req, res, next) => {
     const user = await User.findOne({ where: { id: req.user.id } });
 
     const { id, name, description, tags, time, place } = req.body;
@@ -337,7 +367,7 @@ app.put("/meetUps", authenticateToken, async (req, res) => {
         const updatedMeetUp = await router.updateMeetUp(id, updates,user.id);
         res.redirect("/meetUps");
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        next(error);
     }
 });
 
@@ -423,7 +453,7 @@ app.get("/deleteMeetUp", (req, res) => {
  *       500:
  *         description: Server error
  */
-app.delete("/meetUps", authenticateToken, async (req, res) => {
+app.delete("/meetUps", authenticateToken, async (req, res, next) => {
     const user = await User.findOne({ where: { id: req.user.id } });
     const { id } = req.body;
     try {
@@ -432,7 +462,7 @@ app.delete("/meetUps", authenticateToken, async (req, res) => {
         const deletedMeetUp = await router.deleteMeetUp(id,user.id);
         res.redirect("/meetUps");
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        next(error);
     }
 });
 /**
@@ -472,7 +502,7 @@ app.delete("/meetUps", authenticateToken, async (req, res) => {
  *       500:
  *         description: Server error
  */
-app.post("/meetUps", authenticateToken, async (req, res) => {
+app.post("/meetUps", authenticateToken, validateTime, async (req, res, next) => {
     const user = await User.findOne({ where: { id: req.user.id } });
     const { name, description, tags, time, place } = req.body;
     try {
@@ -480,7 +510,7 @@ app.post("/meetUps", authenticateToken, async (req, res) => {
         const newMeetUp = await router.postMeetUp(name, description, tagsArray, time, place, user.id, user.role);
         res.redirect("/meetUps");
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        next(error);
     }
 });
 
@@ -501,17 +531,57 @@ app.post("/meetUps", authenticateToken, async (req, res) => {
  *         description: Server error
  */
 
-
-
-
-app.get("/logout", authenticateToken, async (req, res) => {
+app.get("/logout", authenticateToken, async (req, res, next) => {
     const userId = req.user.userId;
     try {
        await RefreshToken.destroy({ where: { userId:req.user.id} });
         res.clearCookie('token');
         res.redirect("/authorization");
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /registerMeetUp:
+ *   post:
+ *     summary: Register a user for a meetup
+ *     tags: [UserMeetUp]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/x-www-form-urlencoded:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               meetUpId:
+ *                 type: integer
+ *                 description: The ID of the meetup to register
+ *             required:
+ *               - meetUpId
+ *             example:
+ *               meetUpId: 1
+ *     responses:
+ *       200:
+ *         description: User registered for the meetup successfully
+ *       400:
+ *         description: Bad request
+ *       500:
+ *         description: Internal server error
+ */
+
+
+app.post("/registerMeetUp", authenticateToken, async (req, res, next) => {
+    try {
+        const { meetUpId } = req.body;
+        const userId = req.user.id;
+
+        await UserMeetUp.create({ userId, meetUpId });
+
+        res.redirect(`/meetUps?id=${meetUpId}`);
+    } catch (error) {
+        next(error);
     }
 });
 
