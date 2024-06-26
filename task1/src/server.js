@@ -579,7 +579,7 @@ app.post("/registerMeetUp", authenticateToken, async (req, res, next) => {
 
         await UserMeetUp.create({ userId, meetUpId });
 
-        res.redirect(`/meetUps?id=${meetUpId}`);
+        res.redirect(`/meetUps`);
     } catch (error) {
         next(error);
     }
