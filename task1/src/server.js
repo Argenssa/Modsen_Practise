@@ -68,8 +68,14 @@ sequelize.sequelize.sync().then(() => {
  *       required: true
  *       content:
  *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/User'
+ *         type: object
+ *             properties:
+ *               username:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *                role:
+ *                 type: string
  *     responses:
  *       201:
  *         description: The created user
