@@ -1,11 +1,11 @@
 const express = require('express');
-import sequelize from "./database/database";
-const { MeetUp } = require("./models/MeetUp");
-const { UserMeetUp } = require("./models/UserMeetUp");
+const sequelize = require('./database/database.js');
+const { MeetUp } = require("./models/MeetUp.js");
+const { UserMeetUp } = require("./models/UserMeetUp.js");
 const url = require('url');
 const { Op } = require("sequelize");
-const { User } = require("./models/User");
-const { RefreshToken } = require("./models/RefreshToken");
+const { User } = require("./models/User.js");
+const { RefreshToken } = require("./models/RefreshToken.js");
 const { userSchema } = require("./validation/userValidate");
 const { validate } = require("./validation/validMiddleware");
 const { Registration } = require("./reg_auth/Registration");
@@ -17,7 +17,7 @@ require('dotenv').config();
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
 const passport = require('./passport/passport');
-const swaggerRouter = require('./docs/swagger');
+const swaggerRouter = require('./docs/swagger.js');
 
 function errorHandler(err, req, res, next) {
     console.error(err.stack);

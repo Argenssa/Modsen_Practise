@@ -1,5 +1,5 @@
-const { MeetUp } = require('../models/MeetUp');
-const { User } = require('../models/User');
+const { MeetUp } = require('../models/MeetUp.js');
+const { User } = require('../models/User.js');
 
 class MeetUpsRoutes {
     async getMeetUps() {

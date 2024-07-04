@@ -1,7 +1,7 @@
-const User = require('../models/User');
+const User = require('../models/User.js');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
-const { RefreshToken } = require('../models/RefreshToken');
+const { RefreshToken } = require('../models/RefreshToken.js');
 async function Authorization(name, password) {
     console.log(name, password);
     const user = await User.User.findOne({ where: { username: name, password: password } });

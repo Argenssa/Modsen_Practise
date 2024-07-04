@@ -1,7 +1,7 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
-const { RefreshToken } = require('../models/RefreshToken');
-const { User } = require('../models/User');
+const { RefreshToken } = require('../models/RefreshToken.js');
+const { User } = require('../models/User.js');
 const router = express.Router();
 
 router.post('/refresh-token', async (req, res) => {

@@ -20,32 +20,18 @@
  *         expires: '2023-12-31T23:59:59.999Z'
  *         userId: 1
  */
-import { DataTypes, Model } from 'sequelize';
-import {sequelize} from '../database/database';
-import { User } from '../models/User';
+const { DataTypes } = require('sequelize');
+const { User } = require("../models/User");
+const sequelize = require('../database/database');
 
-class RefreshToken extends Model {
-    public token!: string;
-    public expires!: Date;
-    public userId!: number;
-}
-
-RefreshToken.init({
-    token: {
-        type: DataTypes.STRING,
-        allowNull: false,
-    },
-    expires: {
-        type: DataTypes.DATE,
-        allowNull: false,
-    },
+const RefreshToken = sequelize.sequelize.define("RefreshToken", {
+    token: DataTypes.STRING,
+    expires: DataTypes.DATE,
 }, {
-    sequelize,
-    modelName: 'RefreshToken',
     timestamps: false,
 });
 
-User.hasOne(RefreshToken, { foreignKey: 'userId' });
-RefreshToken.belongsTo(User, { foreignKey: 'userId' });
+User.hasOne(RefreshToken, { foreignKey: "userId" });
+RefreshToken.belongsTo(User, { foreignKey: "userId" });
 
-export { RefreshToken };
+exports.RefreshToken = RefreshToken;
