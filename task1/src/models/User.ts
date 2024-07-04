@@ -23,15 +23,38 @@
  *         password: 'password123'
  *         role: 'user'
  */
-const sequelize = require("../database/database");
-const { DataType, DataTypes } = require("sequelize");
+import { DataTypes, Model } from 'sequelize';
+import {sequelize} from '../database/database';
 
-const User = sequelize.sequelize.define("User", {
-    username: DataTypes.TEXT,
-    password: DataTypes.TEXT,
-    role: DataTypes.STRING,
+class User extends Model {
+    public id!: number;
+    public username!: string;
+    public password!: string;
+    public role!: string;
+}
+
+User.init({
+    id: {
+        type: DataTypes.INTEGER,
+        autoIncrement: true,
+        primaryKey: true,
+    },
+    username: {
+        type: DataTypes.TEXT,
+        allowNull: false,
+    },
+    password: {
+        type: DataTypes.TEXT,
+        allowNull: false,
+    },
+    role: {
+        type: DataTypes.STRING,
+        allowNull: false,
+    },
 }, {
+    sequelize,
+    modelName: 'User',
     timestamps: false,
 });
 
-exports.User = User;
+export { User };

@@ -1,5 +1,5 @@
 const express = require('express');
-const sequelize = require("./database/database");
+import sequelize from "./database/database";
 const { MeetUp } = require("./models/MeetUp");
 const { UserMeetUp } = require("./models/UserMeetUp");
 const url = require('url');

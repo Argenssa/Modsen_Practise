@@ -40,21 +40,53 @@
  *         Place: 'Conference Room 1'
  *         RegisteredUsers: [1, 2, 3]
  */
-const sequelize = require("../database/database.js");
-const User = require("../models/User");
-const { DataTypes } = require("sequelize");
+import { Sequelize, DataTypes, Model } from 'sequelize';
+import {sequelize} from '../database/database';
+import { User } from '../models/User';
 
-const MeetUp = sequelize.sequelize.define("MeetUp", {
-    Name: DataTypes.TEXT,
-    Description: DataTypes.TEXT,
-    Tags: DataTypes.ARRAY(DataTypes.TEXT),
-    Time: DataTypes.TIME,
-    Place: DataTypes.TEXT,
+class MeetUp extends Model {
+    public id!: number;
+    public Name!: string;
+    public Description!: string;
+    public Tags!: string[];
+    public Time!: string;
+    public Place!: string;
+    public RegisteredUsers!: number[];
+}
 
+MeetUp.init({
+    id: {
+        type: DataTypes.INTEGER,
+        autoIncrement: true,
+        primaryKey: true,
+    },
+    Name: {
+        type: DataTypes.TEXT,
+        allowNull: false,
+    },
+    Description: {
+        type: DataTypes.TEXT,
+        allowNull: false,
+    },
+    Tags: {
+        type: DataTypes.ARRAY(DataTypes.TEXT),
+        allowNull: false,
+    },
+    Time: {
+        type: DataTypes.TIME,
+        allowNull: false,
+    },
+    Place: {
+        type: DataTypes.TEXT,
+        allowNull: false,
+    },
 }, {
+    sequelize,
+    modelName: 'MeetUp',
     timestamps: false,
 });
 
-User.User.hasMany(MeetUp, { foreignKey: "userId" });
+User.hasMany(MeetUp, { foreignKey: 'userId' });
+MeetUp.belongsTo(User, { foreignKey: 'userId' });
 
-exports.MeetUp = MeetUp;
+export { MeetUp };
