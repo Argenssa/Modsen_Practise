@@ -68,14 +68,13 @@ sequelize.sequelize.sync().then(() => {
  *       required: true
  *       content:
  *         application/json:
- *           schema:
- *             type: object
+ *         type: object
  *             properties:
  *               username:
  *                 type: string
  *               password:
  *                 type: string
- *               role:
+ *                role:
  *                 type: string
  *     responses:
  *       201:
