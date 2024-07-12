@@ -5,9 +5,23 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="309d81f0-9b90-48f2-93b7-08ff3388de16" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/package-lock.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/task2.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../Node.js/.idea/.gitignore" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../Node.js/.idea/jsLibraryMappings.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../Node.js/.idea/modules.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../Node.js/.idea/vcs.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../Node.js/[1] block unblock operations/async.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../Node.js/[1] block unblock operations/file1.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../Node.js/[1] block unblock operations/file2.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../Node.js/[1] block unblock operations/file3.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../Node.js/[1] block unblock operations/sync.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../Node.js/[2] fs module/public/tt.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../Node.js/[2] fs module/task1.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../Node.js/[3] events Module/task1.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../Node.js/[4] path module/task1.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../Node.js/[5] http module/task1.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../Node.js/[6] stream module/input.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../Node.js/[6] stream module/output.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../Node.js/[6] stream module/task1.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -25,27 +39,27 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/.." />
   </component>
-  <component name="ProjectColorInfo"><![CDATA[{
-  "associatedIndex": 1
-}]]></component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 1
+}</component>
   <component name="ProjectId" id="2imesZ5wesyvBQwXbN6pDYkvRDi" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "git-widget-placeholder": "main",
-    "last_opened_file_path": "F:/qwerty/Modsen_Practise/HTTP",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;last_opened_file_path&quot;: &quot;F:/qwerty/Modsen_Practise/HTTP&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
@@ -62,6 +76,8 @@
       <option name="presentableId" value="Default" />
       <updated>1720100387047</updated>
       <workItem from="1720100388135" duration="762000" />
+      <workItem from="1720368494642" duration="671000" />
+      <workItem from="1720598627990" duration="582000" />
     </task>
     <servers />
   </component>
